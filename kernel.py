@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
-import os
-import re
 import time
-import signal
 
-from IPython.kernel.zmq.kernelbase import Kernel
+from ipykernel.kernelbase import Kernel
 from pexpect import spawn, EOF, TIMEOUT
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 
-class BashKernel(Kernel):
+class SASKernel(Kernel):
     implementation = 'sas_kernel'
     implementation_version = __version__
-    
+
     @property
     def language_version(self):
         return "9.4";
@@ -23,11 +20,11 @@ class BashKernel(Kernel):
     @property
     def banner(self):
         if self._banner is None:
-            self._banner = "SAS WELCOMES YOU;"
+            self._banner = "Welcome to Jupyter SAS Kernel!"
         return self._banner
 
     language_info = {'name': 'sas',
-                     #'codemirror_mode': 'SQL',
+                     'codemirror_mode': 'SQL',
                      'mimetype': 'text/plain',
                      'file_extension': '.sas'}
 
@@ -36,21 +33,17 @@ class BashKernel(Kernel):
         self._start_sas()
 
     def _start_sas(self):
-        # Signal handlers are inherited by forked processes, and we can't easily
-        # reset it from the subprocess. Since kernelapp ignores SIGINT except in
-        # message handlers, we need to temporarily reset the SIGINT handler here
-        # so that bash and its children are interruptible.
-        #sig = signal.signal(signal.SIGINT, signal.SIG_DFL)
         try:
-            self.saswrapper = spawn('sas', ['-nodms', '-terminal',
-                                            '-log', '/dev/null',])
+            self.saswrapper = spawn('sas', ['-nodms', '-terminal',])
+            self.saswrapper.send("OPTIONS NONUMBER NODATE PAGESIZE=MAX;")
+            self.saswrapper.send("TITLE;")
+            discard = self._smart_read(30)
         finally:
             pass
-        #signal.signal(signal.SIGINT, sig)
 
     def do_execute(self, code, silent, store_history=True,
                    user_expressions=None, allow_stdin=False):
-        
+
         if not code.strip():
             return {'status': 'ok', 'execution_count': self.execution_count,
                     'payload': [], 'user_expressions': {}}
@@ -66,7 +59,7 @@ class BashKernel(Kernel):
             self.saswrapper.expect([EOF])
             output = self.saswrapper.before
         except EOF:
-            output = 'SAS QUIT.'
+            output = 'SAS HAS ALREADY QUIT. Try restarting kernel.'
             interrupted = True
 
         if not silent:
@@ -81,7 +74,7 @@ class BashKernel(Kernel):
         return {'status': 'ok', 'execution_count': self.execution_count,
                 'payload': [], 'user_expressions': {}}
 
-    
+
     def _smart_send(self, sendable):
         try:
             length = len(sendable)
@@ -97,6 +90,7 @@ class BashKernel(Kernel):
         return nsent
 
     def _smart_read(self, timeout):
+        """Read return response. Timeout in seconds."""
         # maximum time allowed to read the first response
         first_char_timeout = timeout * 0.5
 
@@ -123,5 +117,5 @@ class BashKernel(Kernel):
 
 
 if __name__ == '__main__':
-    from IPython.kernel.zmq.kernelapp import IPKernelApp
-    IPKernelApp.launch_instance(kernel_class=BashKernel)
+    from ipykernel.kernelapp import IPKernelApp
+    IPKernelApp.launch_instance(kernel_class=SASKernel)

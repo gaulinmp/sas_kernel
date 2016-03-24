@@ -1,6 +1,6 @@
 {
- "argv": ["/usr/local/share/anaconda/bin/python",
-          "/usr/local/share/jupyter/kernels/sas/kernel.py",
+ "argv": ["python",
+          "TODO:FIXASAP/kernel.py",
           "-f",
           "{connection_file}"],
  "codemirror_mode": "SQL",
